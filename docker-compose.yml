@@ -19,23 +19,25 @@ services:
       - CHOKIDAR_USEPOLLING=true
     build:
       dockerfile: Dockerfile.dev
-      context: multi_agents/frontend
+      context: frontend/nextjs
     volumes:
       - /app/node_modules
-      - ./multi_agents/frontend:/app
+      - ./frontend/nextjs:/app
     restart: always
     ports:
       - 3000:3000
 
   gpt-researcher-tests:
-    image: gptresearcher/gpt-researcher
+    image: gptresearcher/gpt-researcher-tests
     build: ./
     environment: 
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       TAVILY_API_KEY: ${TAVILY_API_KEY}
       LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY}
+    profiles: ["test"]
     command: >
       /bin/sh -c "
-      pip install pytest pytest-asyncio &&
-      python -m pytest tests/report-types.py
+      pip install pytest pytest-asyncio faiss-cpu &&
+      python -m pytest tests/report-types.py &&
+      python -m pytest tests/vector-store.py
       "

@@ -126,13 +126,13 @@ def generate_resource_report_prompt(
 
 
 def generate_custom_report_prompt(
-    query_prompt, context, report_source: str, report_format="apa", total_words=1000
+    query_prompt, context, report_source: str, report_format="apa", tone=None, total_words=1000
 ):
     return f'"{context}"\n\n{query_prompt}'
 
 
 def generate_outline_report_prompt(
-    question, context, report_source: str, report_format="apa", total_words=1000
+    question, context, report_source: str, report_format="apa",tone=None,  total_words=1000
 ):
     """Generates the outline report prompt for the given question and research summary.
     Args: question (str): The question to generate the outline report prompt for
@@ -344,6 +344,26 @@ Using the above latest information, Prepare a detailed report introduction on th
 - You must include hyperlinks with markdown syntax ([url website](url)) related to the sentences wherever necessary.
 Assume that the current date is {datetime.now(timezone.utc).strftime('%B %d, %Y')} if required.
 """
+
+def generate_report_conclusion(report_content: str) -> str:
+    prompt = f"""
+    Based on the following research report, please write a concise conclusion that summarizes the main findings and their implications:
+
+    {report_content}
+
+    Your conclusion should:
+    1. Recap the main points of the research
+    2. Highlight the most important findings
+    3. Discuss any implications or next steps
+    4. Be approximately 2-3 paragraphs long
+    
+    If there is no "## Conclusion" section title written at the end of the report, please add it to the top of your conclusion. 
+    You must include hyperlinks with markdown syntax ([url website](url)) related to the sentences wherever necessary.
+    
+    Write the conclusion:
+    """
+
+    return prompt
 
 
 report_type_mapping = {

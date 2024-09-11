@@ -35,7 +35,7 @@ def get_retriever(retriever):
             from gpt_researcher.retrievers import SerpApiSearch
 
             retriever = SerpApiSearch
-        case "googleSerp":
+        case "serper":
             from gpt_researcher.retrievers import SerperSearch
 
             retriever = SerperSearch
@@ -142,11 +142,10 @@ async def choose_agent(
                 {"role": "system", "content": f"{auto_agent_instructions()}"},
                 {"role": "user", "content": f"task: {query}"},
             ],
-            temperature=0,
+            temperature=0.15,
             llm_provider=cfg.llm_provider,
             llm_kwargs=cfg.llm_kwargs,
             cost_callback=cost_callback,
-            openai_api_key=headers.get("openai_api_key"),
         )
 
         agent_dict = json.loads(response)
@@ -194,7 +193,6 @@ async def get_sub_queries(
     parent_query: str,
     report_type: str,
     cost_callback: callable = None,
-    openai_api_key=None,
 ):
     """
     Gets the sub queries
@@ -225,11 +223,10 @@ async def get_sub_queries(
                 ),
             },
         ],
-        temperature=0,
+        temperature=0.1,
         llm_provider=cfg.llm_provider,
         llm_kwargs=cfg.llm_kwargs,
         cost_callback=cost_callback,
-        openai_api_key=openai_api_key,
     )
 
     sub_queries = json_repair.loads(response)
@@ -321,6 +318,30 @@ async def summarize(
 
     return concatenated_summaries
 
+async def write_conclusion(
+    report, agent_role_prompt, cfg, cost_callback: callable = None
+):
+    conclusion_prompt = generate_report_conclusion(report_content=report)
+    conclusion = ""
+    try:
+        conclusion = await create_chat_completion(
+            model=cfg.fast_llm_model,
+            messages=[
+                {"role": "system", "content": f"{agent_role_prompt}"},
+                {
+                    "role": "user",
+                    "content": f"{conclusion_prompt}",
+                },
+            ],
+            temperature=0.35,
+            llm_provider=cfg.llm_provider,
+            llm_kwargs=cfg.llm_kwargs,
+            cost_callback=cost_callback,
+        )
+    except Exception as e:
+        print(f"{Fore.RED}Error in generating report conclusion: {e}{Style.RESET_ALL}")
+    return conclusion
+
 
 async def summarize_url(
     query, raw_data, agent_role_prompt, cfg, cost_callback: callable = None
@@ -349,7 +370,7 @@ async def summarize_url(
                     "content": f"{generate_summary_prompt(query, raw_data)}",
                 },
             ],
-            temperature=0,
+            temperature=0.35,
             llm_provider=cfg.llm_provider,
             llm_kwargs=cfg.llm_kwargs,
             cost_callback=cost_callback,
@@ -378,7 +399,7 @@ async def generate_draft_section_titles(
                 {"role": "system", "content": f"{agent_role_prompt}"},
                 {"role": "user", "content": content},
             ],
-            temperature=0,
+            temperature=0.15,
             llm_provider=cfg.llm_provider,
             llm_kwargs=cfg.llm_kwargs,
             cost_callback=cost_callback,
@@ -436,14 +457,13 @@ async def generate_report(
                 {"role": "system", "content": f"{agent_role_prompt}"},
                 {"role": "user", "content": content},
             ],
-            temperature=0,
+            temperature=0.35,
             llm_provider=cfg.llm_provider,
             stream=True,
             websocket=websocket,
             max_tokens=cfg.smart_token_limit,
             llm_kwargs=cfg.llm_kwargs,
             cost_callback=cost_callback,
-            openai_api_key=headers.get("openai_api_key"),
         )
     except Exception as e:
         print(f"{Fore.RED}Error in generate_report: {e}{Style.RESET_ALL}")
@@ -490,7 +510,7 @@ async def get_report_introduction(
                     "content": generate_report_introduction(query, context),
                 },
             ],
-            temperature=0,
+            temperature=0.25,
             llm_provider=config.llm_provider,
             stream=True,
             websocket=websocket,
@@ -604,7 +624,7 @@ def table_of_contents(markdown_text: str):
         return markdown_text  # Return original markdown text if an exception occurs
 
 
-def add_source_urls(report_markdown: str, visited_urls: set):
+def add_references(report_markdown: str, visited_urls: set):
     """
     This function takes a Markdown report and a set of visited URLs as input parameters.
 

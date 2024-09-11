@@ -1,7 +1,6 @@
 import importlib
 from typing import Any
-
-from colorama import Fore, Style
+from colorama import Fore, Style, init
 
 
 class GenericLLMProvider:
@@ -112,13 +111,19 @@ class GenericLLMProvider:
                 response += content
                 paragraph += content
                 if "\n" in paragraph:
-                    if websocket is not None:
-                        await websocket.send_json({"type": "report", "output": paragraph})
-                    else:
-                        print(f"{Fore.GREEN}{paragraph}{Style.RESET_ALL}")
+                    await self._send_output(paragraph, websocket)
                     paragraph = ""
 
+        if paragraph:
+            await self._send_output(paragraph, websocket)
+
         return response
+
+    async def _send_output(self, content, websocket=None):
+        if websocket is not None:
+            await websocket.send_json({"type": "report", "output": content})
+        else:
+            print(f"{Fore.GREEN}{content}{Style.RESET_ALL}")
 
 
 
@@ -141,7 +146,10 @@ _SUPPORTED_PROVIDERS = {
 def _check_pkg(pkg: str) -> None:
     if not importlib.util.find_spec(pkg):
         pkg_kebab = pkg.replace("_", "-")
+        # Import colorama and initialize it
+        init(autoreset=True)
+        # Use Fore.RED to color the error message
         raise ImportError(
-            f"Unable to import {pkg_kebab}. Please install with "
+            Fore.RED + f"Unable to import {pkg_kebab}. Please install with "
             f"`pip install -U {pkg_kebab}`"
         )
